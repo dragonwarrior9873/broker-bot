@@ -22,7 +22,8 @@ const replyMessage = "Please add @Fatality_Boost_Bot as an admin to your group t
 bot.start((ctx) => {
     console.log(ctx)
     console.log(ctx.update.message.from)
-    console.log(ctx.update.message.chat)
+    console.log(ctx.update.message.chat) // we can evaluate the channel is from group or person by ctx.chat.type if this is privacy then personal chat
+                                            // and if ctx.chat.type is group then from group chat.      
     chatInfos.push({ userName: ctx.chat.username, chatId: ctx.chat.id })
     if (!getPixelDrifterChatId(chatInfos)) {
         ctx.reply("@PixelDrifter isn't available now. \n Please wait until he is available.");
