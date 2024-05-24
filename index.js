@@ -1,72 +1,78 @@
 const Telegraf = require('telegraf'); //includeing telegraf lib
+const { getPixelDrifterChatId, getUpdates } = require('./util');
 
-const bot = new Telegraf('6777923138:AAEY0Ft7WS3G9kLlk80IplZJcOdJ6z-b2wM'); // add your bot token
-
-// help message text:
+const bot = new Telegraf('6588664139:AAG160CRuCvi3DQKpSNi6m90-E44s6Bkex4'); // add your bot token
+let chatInfos = []
 const helpMessage = `
 say something to me
 /start - starts the bot
 /help - command reference
-/echo - say user's name + " used the echo command"
-/echo (words) - (words)
+/send - send CA to Admin
 `;
+const drifterHelpMessage = `
+say something to me
+/start - starts the bot
+/help - command reference
+/send - send message to all groups
+`;
+const startMessage = "Please enter the CA of the chart you want to boost. \n Use /send command to send CA.\n Example /send 9ovJ86kQmk1qrrFSQNY"
+const drifterStartMessage = "Please enter the message to send all groups. \n Use /send command to send message.\n Exampe /send hello"
+const replyMessage = "Please add @Fatality_Boost_Bot as an admin to your group telegram group. One of our Devs will verify and trigger your chart’s $FATALITY Boost within 12 hours."
 
-// use method to log information
-// bot.use((ctx, next) => {
-//     // console.log(ctx.chat);
-//     if(ctx.updateSubTypes[0] == 'text'){
-//         // console.log(ctx.from.username + " said: " + ctx.message.text);
-//         bot.telegram.sendMessage("yourChatID", ctx.from.username + " said: " + ctx.message.text);
-//     }else{
-//         // console.log(ctx.from.username+ " sent: "+ctx.updateSubTypes[0]);
-//         bot.telegram.sendMessage("yourChatID", ctx.from.username+ " sent: "+ctx.updateSubTypes[0]);
-//     }
-//     next();
-// })
-
-// start command handler
 bot.start((ctx) => {
-    // logger(ctx);
-    console.log(JSON.stringify(ctx));
-    ctx.reply("Hello " + ctx.from.first_name);
-    bot.telegram.sendMessage(ctx.chat.id, helpMessage, {
-            parse_mode: "markdown"
-          });
-    ctx.reply(helpMessage);
+    console.log(ctx)
+    console.log(ctx.update.message.from)
+    console.log(ctx.update.message.chat)
+    chatInfos.push({ userName: ctx.chat.username, chatId: ctx.chat.id })
+    if (!getPixelDrifterChatId(chatInfos)) {
+        ctx.reply("@PixelDrifter isn't available now. \n Please wait until he is available.");
+        return
+    }
+    if (ctx.chat.id != getPixelDrifterChatId(chatInfos)) ctx.reply(startMessage);
+    else ctx.reply(drifterStartMessage);
 })
 
-// help command handler
 bot.help((ctx) => {
-    // logger(ctx);
-    ctx.reply(helpMessage);
+    if (!getPixelDrifterChatId(chatInfos)) {
+        ctx.reply("@PixelDrifter isn't available now. Please wait until he is available.");
+        return
+    }
+    if (ctx.chat.id != getPixelDrifterChatId(chatInfos)) ctx.reply(helpMessage);
+    else ctx.reply(drifterHelpMessage);
 })
 
-//echo command function
-bot.command('echo', (ctx) => {
-    // logger(ctx);
-    // console.log(ctx);
+bot.command('send', async (ctx) => {
     let input = ctx.message.text;
     let inputArr = input.split(" ");
-    // console.log(inputArr);
-    let message = "";
-    if(inputArr.length == 1){
-        message = ctx.from.first_name + " used the echo command";
+    if (inputArr.length != 2) {
+        ctx.reply("Invalid Command. \n Use /send command to send CA.\n Example /send 9ovJ86kQmk1qrrFSQNY ")
+        return
     }
-    else{
-        inputArr.shift();
-        message = inputArr.join(" ");
+
+    if (!getPixelDrifterChatId(chatInfos)) {
+        ctx.reply("@PixelDrifter isn't available now. Please wait until he is available.");
+        return
     }
-    ctx.reply(message);
+    if (ctx.chat.id != getPixelDrifterChatId(chatInfos)) {
+        let sendMessage = ctx.chat.username + " sent CA " + inputArr[1]
+        ctx.reply(replyMessage)
+        bot.telegram.sendMessage(getPixelDrifterChatId(chatInfos), sendMessage, {
+            parse_mode: "markdown"
+        });
+    }
+    else {
+        // await getUpdates();
+        for (let i = 0; i < chatInfos.length; i++) {
+            const chat = chatInfos[i];
+            if (chat.chatId == getPixelDrifterChatId(chatInfos)) continue
+            bot.telegram.sendMessage(chat.chatId, inputArr[1], {
+                parse_mode: "markdown"
+            }).then((message) => {
+                bot.telegram.pinChatMessage(chat.chatId, message.message_id)
+            });
+        }
+    }
+
 })
 
-
-// this is a loger function example, it can be used in method to send you information
-
-/* 
-function logger(ctx) {
-     console.log(ctx.from.username + " said: " + ctx.message.text);
-}
-*/
-
-// at the end of your script remmember to add this, else yor bot will not run
 bot.launch();
